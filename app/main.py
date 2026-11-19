@@ -16,7 +16,7 @@ from app.db.session import SessionLocal, engine
 
 log = logging.getLogger("storefront")
 
-DESCRIPTION = "The API behind Everyday Market. Log in, then press **Authorize** and paste the token."
+DESCRIPTION = "The API behind Everyday Market. Authentication is switched off: every route can be called without logging in."
 
 TAGS = [{"name": n} for n in ("Health", "Customer auth", "Admin auth", "Users", "Products", "Orders", "Payments", "Import sources")]
 
@@ -42,7 +42,6 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title="Everyday Market API", version="1.0.0", description=DESCRIPTION, openapi_tags=TAGS, lifespan=lifespan,
-        contact={"name": "storefront-backend", "url": "https://github.com/RaunakDasgupta/storefront-backend"},
     )
     app.add_middleware(
         CORSMiddleware, allow_origins=["*"] if settings.cors_origins.strip() == "*" else settings.cors_origin_list,

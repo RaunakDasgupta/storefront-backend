@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_customer
+# from app.api.deps import require_customer
+from app.api.deps import acting_as
 from app.core.errors import COMMON_ERRORS, ErrorResponse
 from app.core.security import create_access_token
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import CUSTOMER, User
 from app.schemas.auth import LoginIn, RegisterIn, SessionOut, UserOut
 from app.services import users
 
@@ -38,6 +39,8 @@ def login(data: LoginIn, db: Session = Depends(get_db)) -> SessionOut:
     return _session(users.authenticate_customer(db, data.email, data.password))
 
 
-@router.get("/me", response_model=UserOut, summary="Who am I?", responses={k: COMMON_ERRORS[k] for k in (401, 403)})
-def me(user: User = Depends(require_customer)) -> UserOut:
+@router.get("/me", response_model=UserOut, summary="Who am I?", description="The account in the token, or the first customer account when no token is sent.")
+def me(
+    user: User = Depends(acting_as(CUSTOMER)),  # auth disabled, was Depends(require_customer)
+) -> UserOut:
     return UserOut(name=user.name, email=user.email)

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_admin
+# from app.api.deps import require_admin
 from app.core.config import get_settings
 from app.core.errors import COMMON_ERRORS, ApiError, ErrorResponse
 from app.db.session import get_db
-from app.models.user import User
+# from app.models.user import User
 from app.schemas.product import (
     ImportRequest, ImportResult, ImportValidation, ProductCreate, ProductOut, ProductUpdate, ImportSummary,
 )
@@ -14,7 +14,7 @@ from app.services.importing.service import describe, validate_file
 from app.services.catalog_sheet import SheetResult
 
 router = APIRouter(prefix="/products", tags=["Products"])
-ADMIN_ERRORS = {k: COMMON_ERRORS[k] for k in (401, 403, 422)}
+ADMIN_ERRORS = {k: COMMON_ERRORS[k] for k in (422,)}  # was (401, 403, 422) while auth was on
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "No product with this id."}}
 
 
@@ -37,7 +37,11 @@ def list_products(db: Session = Depends(get_db)):
     description="Admin 'Add product'. The id is made from the SKU. A SKU that already exists (in any capitals) is refused with 409.",
     responses={**ADMIN_ERRORS, 409: {"model": ErrorResponse, "description": "A product with this SKU already exists."}},
 )
-def create_product(data: ProductCreate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def create_product(
+    data: ProductCreate,
+    db: Session = Depends(get_db),
+    # _: User = Depends(require_admin),  # auth disabled
+):
     return service.create_product(db, data)
 
 
@@ -51,8 +55,12 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), _: User =
     ),
     responses=ADMIN_ERRORS,
 )
-def import_products(data: ImportRequest, db: Session = Depends(get_db), user: User = Depends(require_admin)) -> ImportResult:
-    added, updated = service.import_rows(db, data.rows, user_id=user.id, source="rows")
+def import_products(
+    data: ImportRequest,
+    db: Session = Depends(get_db),
+    # user: User = Depends(require_admin),  # auth disabled
+) -> ImportResult:
+    added, updated = service.import_rows(db, data.rows, user_id=None, source="rows")
     return ImportResult(added=added, updated=updated)
 
 
@@ -65,7 +73,11 @@ def import_products(data: ImportRequest, db: Session = Depends(get_db), user: Us
     ),
     responses=ADMIN_ERRORS | {413: {"model": ErrorResponse, "description": "The file is too large."}},
 )
-def validate_import_file(file: UploadFile = File(description="A .csv or .xlsx file."), db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def validate_import_file(
+    file: UploadFile = File(description="A .csv or .xlsx file."),
+    db: Session = Depends(get_db),
+    # _: User = Depends(require_admin),  # auth disabled
+):
     return validate_file(db, file.filename or "", _read_upload(file))
 
 
@@ -74,13 +86,17 @@ def validate_import_file(file: UploadFile = File(description="A .csv or .xlsx fi
     description="Validates the file like `/products/import/validate` and, when it is usable, imports the rows that passed. Rows with problems are skipped and recorded.",
     responses=ADMIN_ERRORS | {413: {"model": ErrorResponse, "description": "The file is too large."}},
 )
-def import_products_file(file: UploadFile = File(description="A .csv or .xlsx file."), db: Session = Depends(get_db), user: User = Depends(require_admin)) -> ImportResult:
+def import_products_file(
+    file: UploadFile = File(description="A .csv or .xlsx file."),
+    db: Session = Depends(get_db),
+    # user: User = Depends(require_admin),  # auth disabled
+) -> ImportResult:
     checked = validate_file(db, file.filename or "", _read_upload(file))
     if checked.fatal:
         raise ApiError(422, checked.fatal)
     name = (file.filename or "").lower()
     added, updated = service.import_rows(
-        db, checked.rows, user_id=user.id, source="xlsx" if name.endswith((".xlsx", ".xlsm")) else "csv", filename=file.filename,
+        db, checked.rows, user_id=None, source="xlsx" if name.endswith((".xlsx", ".xlsm")) else "csv", filename=file.filename,
         issues=checked.issues, total_rows=checked.summary.total_rows,
     )
     return ImportResult(added=added, updated=updated)
@@ -97,7 +113,12 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
     description="Admin 'Edit product'. Only the fields you send change; send `null` for `size`, `was` or `image` to clear them. The SKU cannot be changed.",
     responses=ADMIN_ERRORS | NOT_FOUND,
 )
-def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def update_product(
+    product_id: str,
+    data: ProductUpdate,
+    db: Session = Depends(get_db),
+    # _: User = Depends(require_admin),  # auth disabled
+):
     return service.update_product(db, product_id, data.model_dump(exclude_unset=True))
 
 
@@ -106,11 +127,19 @@ def update_product(product_id: str, data: ProductUpdate, db: Session = Depends(g
     description="A soft delete: the product disappears from the storefront but is kept, so `/restore` (the Undo button) works and old orders keep their items.",
     responses=ADMIN_ERRORS | NOT_FOUND,
 )
-def delete_product(product_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)) -> Response:
+def delete_product(
+    product_id: str,
+    db: Session = Depends(get_db),
+    # _: User = Depends(require_admin),  # auth disabled
+) -> Response:
     service.delete_product(db, product_id)
     return Response(status_code=204)
 
 
 @router.post("/{product_id}/restore", response_model=ProductOut, response_model_exclude_none=True, summary="Undo a delete", responses=ADMIN_ERRORS | NOT_FOUND)
-def restore_product(product_id: str, db: Session = Depends(get_db), _: User = Depends(require_admin)):
+def restore_product(
+    product_id: str,
+    db: Session = Depends(get_db),
+    # _: User = Depends(require_admin),  # auth disabled
+):
     return service.restore_product(db, product_id)

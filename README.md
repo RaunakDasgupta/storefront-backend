@@ -1,8 +1,8 @@
 # storefront-backend
 
-The API behind **Everyday Market**, for the [storefront-frontend](https://github.com/RaunakDasgupta/storefront-frontend) customer storefront and admin portal. FastAPI, SQLAlchemy and Postgres.
+The API behind **Everyday Market**, for the storefront-frontend customer storefront and admin portal. FastAPI, SQLAlchemy and Postgres.
 
-- Swagger UI at `/docs` (ReDoc at `/redoc`) documents every route, with an **Authorize** button for the login token. The page loads its script from a CDN, so the browser needs internet; the API does not.
+- Swagger UI at `/docs` (ReDoc at `/redoc`) documents every route. The page loads its script from a CDN, so the browser needs internet; the API does not.
 - SQLAlchemy creates and updates the tables on start. There is no migration tool.
 - The catalog sheet (CSV or Excel) is validated row by row on the server.
 
@@ -11,8 +11,7 @@ The API behind **Everyday Market**, for the [storefront-frontend](https://github
 You need Python 3.11+ and an **empty** Postgres database this machine can reach (it can be on another machine).
 
 ```bash
-git clone https://github.com/RaunakDasgupta/storefront-backend.git
-cd storefront-backend
+cd storefront-backend                  # the folder with this README
 python3 -m venv .venv
 source .venv/bin/activate              # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -38,7 +37,7 @@ Open **http://localhost:8000/docs**. On the first start the API creates the tabl
 
 ## Connect the frontend
 
-The frontend is a separate program started in its own terminal. It only needs this API's address:
+The frontend (storefront-frontend) is a separate program started in its own terminal. It only needs this API's address:
 
 ```bash
 cd storefront-frontend
@@ -69,7 +68,9 @@ Before putting a server on the internet: set `SEED_DEMO_DATA=false` and your own
 
 ## API
 
-All routes are under `/api/v1`. Errors are always `{ "message": "..." }`. Send the token from a login as `Authorization: Bearer <token>`.
+All routes are under `/api/v1`. Errors are always `{ "message": "..." }`.
+
+**Authentication is switched off:** no route requires a login. The checks are commented out in the route files (search for `auth disabled`) and `require_customer` / `require_admin` are still in `app/api/deps.py`, so turning it back on means uncommenting them. Five routes still need to know who is calling (`/auth/me`, `/admin/auth/me`, `/payments`, `/orders` list and create). They use the account in a valid `Authorization: Bearer` token if one is sent, and otherwise the first customer (or admin) account, so orders and payments always belong to a real user. The *Who* column below is what the route is meant for once auth is back on.
 
 | Route | Who | What |
 |---|---|---|
@@ -96,7 +97,7 @@ The server decides what matters:
 
 - **Prices and stock.** `POST /orders` ignores the names and prices the browser sends. It prices the cart from its own catalog, refuses what is out of stock and takes the stock. The payment must belong to the customer, be successful, unused, and for exactly that total.
 - **Soft deletes.** Deleting a product or order hides it, so old orders keep their items. A deleted order's stock is not put back.
-- **Roles.** Customers and admins share one `users` table with a `role`. Each can only use its own login and routes. The user lists never include password hashes.
+- **Roles.** Customers and admins share one `users` table with a `role` and have separate login routes. The user lists never include password hashes.
 
 ## The catalog sheet (CSV or Excel)
 
