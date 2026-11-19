@@ -15,14 +15,19 @@ class UserOut(CamelModel):
 
 
 class UserRow(CamelModel):
-    """One account in the admin's user lists. Never includes the password hash."""
+    """One customer in the admin's list. Never includes the password hash."""
 
     id: int
     name: str
     email: str
-    employee_id: str | None = None
     is_active: bool
     created_at: datetime
+
+
+class EmployeeRow(UserRow):
+    """One member of staff: a customer's fields plus the badge number (the `id` is the employees table's own)."""
+
+    employee_id: str
 
 
 class SessionOut(CamelModel):

@@ -41,6 +41,8 @@ def test_only_admins_list_users_and_no_password_hashes_leak(client, customer, ad
     assert "Boss Admin" in [u["name"] for u in admins]
     assert all("password" not in k.lower() for u in customers + admins for k in u)
     assert {"id", "name", "email", "isActive", "createdAt"} <= set(customers[0])
+    # customers and employees are separate tables: only employees have a badge number
+    assert "employeeId" not in customers[0] and admins[0]["employeeId"] == "EMP-9"
 
 
 def test_routes_work_without_a_token(client, customer, admin):  # the fixtures make the accounts that stand in

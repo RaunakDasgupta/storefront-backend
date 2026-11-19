@@ -16,7 +16,8 @@ from app.db.session import SessionLocal
 from app.models.order import Order
 from app.models.payment import Payment
 from app.models.product import Product
-from app.models.user import ADMIN, CUSTOMER, User
+from app.models.employee import Employee
+from app.models.user import User
 from app.schemas.order import Address, OrderCreate, OrderGroupIn, OrderLineIn
 from app.services import orders as order_service
 from app.services import products as product_service
@@ -54,13 +55,22 @@ DEMO_ORDERS = [
 ]
 
 
-def _ensure_user(db: Session, *, name: str, email: str, password: str, role: str, employee_id: str | None = None) -> User:
+def _ensure_user(db: Session, *, name: str, email: str, password: str) -> User:
     user = db.scalar(select(User).where(func.lower(User.email) == email.lower()))
     if user is None:
-        user = User(name=name, email=email, employee_id=employee_id, password_hash=hash_password(password), role=role)
+        user = User(name=name, email=email, password_hash=hash_password(password))
         db.add(user)
         db.flush()
     return user
+
+
+def _ensure_employee(db: Session, *, name: str, email: str, employee_id: str, password: str) -> Employee:
+    employee = db.scalar(select(Employee).where(func.lower(Employee.email) == email.lower()))
+    if employee is None:
+        employee = Employee(name=name, email=email, employee_id=employee_id, password_hash=hash_password(password))
+        db.add(employee)
+        db.flush()
+    return employee
 
 
 def _import_sample_catalog(db: Session) -> int:
@@ -68,7 +78,7 @@ def _import_sample_catalog(db: Session) -> int:
         log.warning("Sample catalog %s not found, no products seeded.", SAMPLE_SHEET)
         return 0
     result = parse_sheet(read_upload(SAMPLE_SHEET.name, SAMPLE_SHEET.read_bytes()))
-    added, _ = product_service.import_rows(db, result.rows, user_id=None, source="csv", filename=SAMPLE_SHEET.name, issues=result.issues, total_rows=result.total_rows)
+    added, _ = product_service.import_rows(db, result.rows, employee_id=None, source="csv", filename=SAMPLE_SHEET.name, issues=result.issues, total_rows=result.total_rows)
     return added
 
 
@@ -100,9 +110,9 @@ def _place_demo_orders(db: Session, customers: list[User]) -> int:
 
 
 def seed_demo_data(db: Session) -> None:
-    customer = _ensure_user(db, **DEMO_CUSTOMER, role=CUSTOMER)
-    _ensure_user(db, **DEMO_ADMIN, role=ADMIN)
-    others = [_ensure_user(db, **c, password="customer123", role=CUSTOMER) for c in OTHER_CUSTOMERS]
+    customer = _ensure_user(db, **DEMO_CUSTOMER)
+    _ensure_employee(db, **DEMO_ADMIN)
+    others = [_ensure_user(db, **c, password="customer123") for c in OTHER_CUSTOMERS]
     db.commit()
 
     if db.scalar(select(func.count()).select_from(Product)) == 0:

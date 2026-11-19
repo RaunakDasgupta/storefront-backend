@@ -37,7 +37,7 @@ from app.core.security import hash_password  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
-from app.models import User  # noqa: E402
+from app.models import Employee, User  # noqa: E402
 
 API = "/api/v1"
 
@@ -58,29 +58,35 @@ def clean_database(client):
         db.commit()
 
 
-def _make_user(email: str, role: str, password: str, name: str, employee_id: str | None = None):
+def _make_user(email: str, password: str, name: str):
     with SessionLocal() as db:
-        db.add(User(name=name, email=email, employee_id=employee_id, password_hash=hash_password(password), role=role))
+        db.add(User(name=name, email=email, password_hash=hash_password(password)))
+        db.commit()
+
+
+def _make_employee(email: str, password: str, name: str, employee_id: str):
+    with SessionLocal() as db:
+        db.add(Employee(name=name, email=email, employee_id=employee_id, password_hash=hash_password(password)))
         db.commit()
 
 
 @pytest.fixture
 def customer(client):
-    _make_user("pat@example.com", "customer", "pat-password", "Pat Lee")
+    _make_user("pat@example.com", "pat-password", "Pat Lee")
     token = client.post(f"{API}/auth/login", json={"email": "pat@example.com", "password": "pat-password"}).json()["token"]
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
 def other_customer(client):
-    _make_user("sam@example.com", "customer", "sam-password", "Sam Roy")
+    _make_user("sam@example.com", "sam-password", "Sam Roy")
     token = client.post(f"{API}/auth/login", json={"email": "sam@example.com", "password": "sam-password"}).json()["token"]
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
 def admin(client):
-    _make_user("boss@example.com", "admin", "boss-password", "Boss Admin", employee_id="EMP-9")
+    _make_employee("boss@example.com", "boss-password", "Boss Admin", "EMP-9")
     token = client.post(f"{API}/admin/auth/login", json={"identity": "EMP-9", "password": "boss-password"}).json()["token"]
     return {"Authorization": f"Bearer {token}"}
 

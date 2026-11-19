@@ -135,7 +135,7 @@ def classify(db: Session, rows: list[ProductImportRow]) -> tuple[int, int]:
 
 
 def import_rows(
-    db: Session, rows: list[ProductImportRow], *, user_id: int | None, source: str, filename: str | None = None,
+    db: Session, rows: list[ProductImportRow], *, employee_id: int | None, source: str, filename: str | None = None,
     issues: list[ImportIssue] | None = None, total_rows: int | None = None,
 ) -> tuple[int, int]:
     """Add new SKUs and update existing ones (matched by SKU, ignoring capitals). Nothing is ever deleted."""
@@ -153,7 +153,7 @@ def import_rows(
             product.deleted_at = None  # importing a SKU that was deleted brings it back
             updated += 1
     db.add(ImportJob(
-        user_id=user_id, source=source, filename=filename, total_rows=total_rows if total_rows is not None else len(rows),
+        employee_id=employee_id, source=source, filename=filename, total_rows=total_rows if total_rows is not None else len(rows),
         added=added, updated=updated, skipped=len(issues or []), issues=[i.model_dump() for i in (issues or [])],
     ))
     db.commit()

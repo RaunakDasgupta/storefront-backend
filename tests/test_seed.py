@@ -2,12 +2,12 @@ from sqlalchemy import func, select
 
 from app.db.seed import seed_demo_data
 from app.db.session import SessionLocal
-from app.models import ImportJob, Order, Product, StockLocation, User
+from app.models import Employee, ImportJob, Order, Product, StockLocation, User
 from tests.conftest import API
 
 
 def counts(db):
-    return {m.__name__: db.scalar(select(func.count()).select_from(m)) for m in (User, Product, StockLocation, Order, ImportJob)}
+    return {m.__name__: db.scalar(select(func.count()).select_from(m)) for m in (User, Employee, Product, StockLocation, Order, ImportJob)}
 
 
 def test_the_demo_data_is_seeded_once_and_the_demo_logins_work(client):
@@ -16,7 +16,7 @@ def test_the_demo_data_is_seeded_once_and_the_demo_logins_work(client):
         first = counts(db)
         seed_demo_data(db)  # a second run changes nothing
         assert counts(db) == first
-    assert first["User"] == 5 and first["Product"] == 40 and first["StockLocation"] == 44 and first["Order"] == 8 and first["ImportJob"] == 1
+    assert first["User"] == 4 and first["Employee"] == 1 and first["Product"] == 40 and first["StockLocation"] == 44 and first["Order"] == 8 and first["ImportJob"] == 1
 
     assert client.post(f"{API}/auth/login", json={"email": "customer@storefront.test", "password": "customer123"}).status_code == 200
     token = client.post(f"{API}/admin/auth/login", json={"identity": "EMP-1001", "password": "admin1234"}).json()["token"]

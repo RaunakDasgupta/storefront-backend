@@ -78,7 +78,7 @@ All routes are under `/api/v1`. Errors are always `{ "message": "..." }`.
 | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` | customers | Sign up (signs in), log in, who am I |
 | `POST /admin/auth/login`, `GET /admin/auth/me` | admins | Log in with an email or employee ID |
 | `GET /users` | admin | List customers |
-| `GET /admin/users` | admin | List admin users |
+| `GET /admin/users` | admin | List admin users (employees, with their employee ID) |
 | `GET /products` | anyone | The catalog |
 | `POST /products` | admin | Add a product (409 if the SKU exists) |
 | `PATCH /products/{id}` | admin | Edit; only the fields sent change, `null` clears `size`, `was`, `image` |
@@ -97,7 +97,7 @@ The server decides what matters:
 
 - **Prices and stock.** `POST /orders` ignores the names and prices the browser sends. It prices the cart from its own catalog, refuses what is out of stock and takes the stock. The payment must belong to the customer, be successful, unused, and for exactly that total.
 - **Soft deletes.** Deleting a product or order hides it, so old orders keep their items. A deleted order's stock is not put back.
-- **Roles.** Customers and admins share one `users` table with a `role` and have separate login routes. The user lists never include password hashes.
+- **Customers and employees are separate.** Customers are in `users`, admins in `employees`: each table has its own ids, its own email and (for employees) employee ID uniqueness, and its own login route. A login token carries which of the two it is for. The lists never include password hashes.
 
 ## The catalog sheet (CSV or Excel)
 
@@ -127,12 +127,13 @@ Importing from a database reads **one table** the same way, with the same column
 
 | Table | Holds |
 |---|---|
-| `users` | Customers and admins (`role`), bcrypt password hashes, optional `employee_id` |
+| `users` | Customers: name, email, bcrypt password hash |
+| `employees` | Admins (staff): name, email, `employee_id` (badge number such as `EMP-1001`), bcrypt password hash. Own ids, apart from `users` |
 | `products` | One row per SKU: price, `stock`, channel, category and the sheet's descriptive columns |
 | `stock_locations` | `system_id`, `location_id`, `quantity`, `uom`, `status` per product |
 | `orders`, `order_items` | Orders (visible number `ORD_` + id, from 1001), the delivery address, and the lines with the name and price at the time |
 | `payments` | Dummy gateway charges (last 4 digits only) |
-| `import_jobs` | A record of every import that changed the catalog |
+| `import_jobs` | A record of every import that changed the catalog, and the `employee` who ran it |
 
 SQLAlchemy alone manages the schema. On start (`AUTO_CREATE_SCHEMA=true`) [`create_schema`](app/db/schema.py) creates every missing table with its indexes and constraints, then adds any column or index that a model has and the existing table lacks. So adding a column or table is: edit the model, restart. By hand:
 
@@ -141,7 +142,7 @@ python -m app.db.schema            # create / update the tables
 python -m app.db.schema --check    # only report what is missing; exit code 1 if anything is
 ```
 
-It does **not** rename, drop or retype columns, or touch data: do those in SQL. A new `NOT NULL` column with no `server_default` is added as nullable, with a warning in the log, because existing rows have no value for it; fill it in and set `NOT NULL` yourself. A database made by an earlier Alembic version works as it is; its leftover `alembic_version` table is harmless.
+It does **not** rename, drop or retype columns, or touch data: do those in SQL. A new `NOT NULL` column with no `server_default` is added as nullable, with a warning in the log, because existing rows have no value for it; fill it in and set `NOT NULL` yourself. A database made by an earlier version, where admins were rows of `users`, does **not** carry over: `users` still has the old `role` and `employee_id` columns (the new code does not fill them), and `import_jobs.user_id` became `employee_id`. For a demo, start from an empty database. Otherwise create the `employees` table with `python -m app.db.schema`, copy the admin rows into it, and drop the old columns by hand. A leftover `alembic_version` table from the Alembic days is harmless.
 
 ## Tests
 
@@ -151,7 +152,7 @@ pytest                                  # on SQLite, a few seconds
 TEST_WITH_POSTGRES=1 pytest             # on a real, embedded Postgres (nothing to install)
 ```
 
-`TEST_DATABASE_URL=postgresql://...` runs them on a Postgres you already have. They cover login and roles, the user lists, the catalog, import validation (CSV and Excel), checkout, payments, the database sources and the schema sync.
+`TEST_DATABASE_URL=postgresql://...` runs them on a Postgres you already have. They cover login for customers and employees, the user lists, the catalog, import validation (CSV and Excel), checkout, payments, the database sources and the schema sync.
 
 ## Layout
 

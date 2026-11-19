@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import acting_as
 from app.core.errors import COMMON_ERRORS, ErrorResponse
 from app.db.session import get_db
+from app.models.employee import Employee
 from app.models.user import ADMIN, CUSTOMER, User
 from app.schemas.order import OrderCreate, OrderOut, StepUpdate
 from app.services import orders as service
@@ -20,7 +21,7 @@ NOT_FOUND = {404: {"model": ErrorResponse, "description": "No order with this nu
 )
 def list_orders(
     db: Session = Depends(get_db),
-    user: User = Depends(acting_as(ADMIN, any_role=True)),  # auth disabled, was Depends(current_user)
+    user: User | Employee = Depends(acting_as(ADMIN, any_role=True)),  # auth disabled, was Depends(current_user)
 ):
     return [service.to_out(o) for o in service.list_orders(db, user)]
 

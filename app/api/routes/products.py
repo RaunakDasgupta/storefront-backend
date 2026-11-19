@@ -60,7 +60,7 @@ def import_products(
     db: Session = Depends(get_db),
     # user: User = Depends(require_admin),  # auth disabled
 ) -> ImportResult:
-    added, updated = service.import_rows(db, data.rows, user_id=None, source="rows")
+    added, updated = service.import_rows(db, data.rows, employee_id=None, source="rows")
     return ImportResult(added=added, updated=updated)
 
 
@@ -96,7 +96,7 @@ def import_products_file(
         raise ApiError(422, checked.fatal)
     name = (file.filename or "").lower()
     added, updated = service.import_rows(
-        db, checked.rows, user_id=None, source="xlsx" if name.endswith((".xlsx", ".xlsm")) else "csv", filename=file.filename,
+        db, checked.rows, employee_id=None, source="xlsx" if name.endswith((".xlsx", ".xlsm")) else "csv", filename=file.filename,
         issues=checked.issues, total_rows=checked.summary.total_rows,
     )
     return ImportResult(added=added, updated=updated)

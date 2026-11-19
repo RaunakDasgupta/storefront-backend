@@ -12,7 +12,7 @@ class ImportJob(Base):
     __tablename__ = "import_jobs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), index=True)
+    employee_id: Mapped[int | None] = mapped_column(ForeignKey("employees.id"), index=True)  # the admin who ran it
     source: Mapped[str] = mapped_column(String(40))  # csv, xlsx, rows, postgres, sqlite
     filename: Mapped[str | None] = mapped_column(String(255))
     total_rows: Mapped[int] = mapped_column(Integer, default=0)

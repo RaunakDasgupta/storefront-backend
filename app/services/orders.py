@@ -11,7 +11,8 @@ from app.core.errors import ApiError
 from app.models.order import Order, OrderItem
 from app.models.payment import Payment
 from app.models.product import Product
-from app.models.user import ADMIN, User
+from app.models.employee import Employee
+from app.models.user import User
 from app.schemas.auth import UserOut
 from app.schemas.order import Address, OrderCreate, OrderLineOut, OrderOut
 
@@ -34,10 +35,10 @@ def to_out(order: Order) -> OrderOut:
     )
 
 
-def list_orders(db: Session, user: User) -> list[Order]:
+def list_orders(db: Session, user: User | Employee) -> list[Order]:
     """Customers get their own orders, admins get everyone's. Newest first."""
     stmt = select(Order).where(Order.deleted_at.is_(None)).options(selectinload(Order.items)).order_by(Order.id.desc())
-    if user.role != ADMIN:
+    if not isinstance(user, Employee):  # staff see every order, a customer only their own
         stmt = stmt.where(Order.user_id == user.id)
     return list(db.scalars(stmt))
 

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth", tags=["Customer auth"])
 
 
 def _session(user: User) -> SessionOut:
-    return SessionOut(user=UserOut(name=user.name, email=user.email), token=create_access_token(user.id, user.role))
+    return SessionOut(user=UserOut(name=user.name, email=user.email), token=create_access_token(user.id, CUSTOMER))
 
 
 @router.post(
