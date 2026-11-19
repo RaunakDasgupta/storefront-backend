@@ -13,14 +13,16 @@ You need Python 3.11+ and an **empty** Postgres database that this machine can r
 ```bash
 git clone https://github.com/RaunakDasgupta/storefront-backend.git
 cd storefront-backend
-make install          # creates .venv and installs the dependencies
-make env              # creates .env: open it and set DATABASE_URL (and CORS_ORIGINS if the frontend is on another machine)
-make run              # migrates the database, seeds the demo data, and starts the API on http://0.0.0.0:8000
+python3 -m venv .venv
+source .venv/bin/activate              # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                   # then open .env and set DATABASE_URL (see below)
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open **http://localhost:8000/docs**. On the first start the API creates every table (`alembic upgrade head`) and fills the empty database with the demo accounts, the sample catalog and a week of orders. It says so if it cannot reach the database, and it never seeds a database that already has products or orders.
+Open **http://localhost:8000/docs**. On the first start the API creates every table (`alembic upgrade head`) and fills the empty database with the demo accounts, the sample catalog and a week of orders. It says so if it cannot reach the database, and it never seeds a database that already has products or orders. For development add `--reload` to the `uvicorn` command so it restarts when you change the code.
 
-Without `make`: `python -m venv .venv && .venv/bin/pip install -r requirements.txt`, copy `.env.example` to `.env`, then `.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000`.
+The backend is its own program: it needs nothing from the frontend, and the frontend needs nothing but its URL. Start, stop and restart them independently.
 
 ### `DATABASE_URL`
 
@@ -30,17 +32,22 @@ postgresql://USER:PASSWORD@HOST:5432/DATABASE
 
 `postgres://` and `postgresql://` URLs are accepted as they are (the psycopg 3 driver is used). Add `?sslmode=require` if the server insists on SSL. The server must accept connections from this machine (`listen_addresses` and `pg_hba.conf` on the database machine).
 
-## Run the frontend and the backend together
+## Connect the frontend (a separate program)
 
-The frontend is [storefront-frontend](https://github.com/RaunakDasgupta/storefront-frontend). Clone it next to this folder, then:
+The frontend is [storefront-frontend](https://github.com/RaunakDasgupta/storefront-frontend), started on its own in another terminal. It only needs the address of this API:
 
 ```bash
-make all              # API on :8000, storefront on :5173, admin on :5173/admin
+cd storefront-frontend
+npm install
+cp .env.example .env.local             # then set:  VITE_API_URL=http://localhost:8000/api/v1
+npm run dev                            # storefront on http://localhost:5173, admin on /admin
 ```
 
-That runs `scripts/run-all.sh`, which starts both and points the frontend at the API (`VITE_API_URL=http://localhost:8000/api/v1`). If the browser is on another machine than the API, give the address the browser should use: `API_PUBLIC_URL=http://192.168.1.20:8000 make all` and add the frontend's address to `CORS_ORIGINS` in `.env` (or use `*` while demoing). Different folder for the frontend: `FRONTEND_DIR=/path/to/storefront-frontend make all`.
+(`VITE_API_URL` can also be set for one run: `VITE_API_URL=http://localhost:8000/api/v1 npm run dev`. Restart `npm run dev` after changing it.) Without `VITE_API_URL` the frontend runs on its own built-in sample data, so it works with the backend off.
 
-By hand, in two terminals: `make run` here, and in the frontend `VITE_API_URL=http://localhost:8000/api/v1 npm run dev`.
+- **API on another machine:** use that machine's address, for example `VITE_API_URL=http://192.168.1.20:8000/api/v1`, and add the frontend's address to `CORS_ORIGINS` in this repo's `.env` (or `*` while demoing), then restart the API.
+- **Frontend shown from another machine:** `npm run dev -- --host` makes it reachable on your network. The browser then calls the API at `VITE_API_URL`, so that must be an address the browser can reach, not `localhost`.
+- **A built frontend:** `VITE_API_URL=https://api.example.com/api/v1 npm run build`. The URL is baked in at build time.
 
 ## Demo logins
 
@@ -117,12 +124,12 @@ Importing from a database reads **one table** the same way: the column names are
 | `payments` | Dummy gateway charges (last 4 digits only) |
 | `import_jobs` | A record of every import that changed the catalog |
 
-Migrations are in `migrations/versions`. They run on start (`AUTO_MIGRATE=true`), or by hand: `make migrate`. Change a model, then:
+Migrations are in `migrations/versions`. They run on start (`AUTO_MIGRATE=true`), or by hand: `python -m app.db.migrate`. Change a model, then:
 
 ```bash
-make new-migration m="add a column"   # generates the migration from the models: read it before you commit it
-make migrate
-make check-migrations                 # fails if the models and the migrations disagree
+alembic revision --autogenerate -m "add a column"   # generates the migration from the models: read it before you commit it
+python -m app.db.migrate                            # applies it (the API also does this on start)
+python -m app.db.migrate --check                    # fails if the models and the migrations disagree
 ```
 
 Alembic cannot see expression indexes, so the case-insensitive unique indexes (`lower(email)`, `lower(sku)`) are written by hand in the first migration.
@@ -130,8 +137,9 @@ Alembic cannot see expression indexes, so the case-insensitive unique indexes (`
 ## Tests
 
 ```bash
-make test       # on SQLite, a few seconds
-make test-pg    # on a real Postgres (an embedded one, nothing to install)
+pip install -r requirements-dev.txt
+pytest                                  # on SQLite, a few seconds
+TEST_WITH_POSTGRES=1 pytest             # on a real Postgres (an embedded one, nothing to install)
 ```
 
 Both build the database with the Alembic migrations and cover login and roles, the catalog, the import validation (CSV and Excel), checkout, payments and the database sources. `TEST_DATABASE_URL=postgresql://...` runs them on a Postgres you already have.
