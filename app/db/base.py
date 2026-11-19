@@ -3,7 +3,7 @@ from sqlalchemy import JSON, MetaData
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase
 
-# Named constraints: Alembic can then drop and rename them on any database without guessing names.
+# Named constraints, so the same names are used on every database (and are easy to find when you change one by hand).
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",

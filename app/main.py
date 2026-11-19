@@ -10,7 +10,7 @@ from sqlalchemy.exc import OperationalError
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
-from app.db.migrate import upgrade_to_head
+from app.db.schema import create_schema
 from app.db.seed import seed_demo_data
 from app.db.session import SessionLocal, engine
 
@@ -58,8 +58,8 @@ TAGS = [
 async def lifespan(_: FastAPI):
     settings = get_settings()
     try:
-        if settings.auto_migrate:
-            upgrade_to_head()
+        if settings.auto_create_schema:
+            create_schema(engine)
         if settings.seed_demo_data:
             with SessionLocal() as db:
                 seed_demo_data(db)

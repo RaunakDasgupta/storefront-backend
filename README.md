@@ -1,9 +1,9 @@
 # storefront-backend
 
-The API behind **Everyday Market**: a [FastAPI](https://fastapi.tiangolo.com) backend with [SQLAlchemy](https://www.sqlalchemy.org) models, [Alembic](https://alembic.sqlalchemy.org) migrations and a Postgres database. It serves the customer storefront and the admin portal of [storefront-frontend](https://github.com/RaunakDasgupta/storefront-frontend).
+The API behind **Everyday Market**: a [FastAPI](https://fastapi.tiangolo.com) backend with [SQLAlchemy](https://www.sqlalchemy.org) models (which also create and update the tables) and a Postgres database. It serves the customer storefront and the admin portal of [storefront-frontend](https://github.com/RaunakDasgupta/storefront-frontend).
 
 - **Swagger UI** at `/docs` (and ReDoc at `/redoc`): every route is documented, with an **Authorize** button for the login token. (The Swagger page loads its script from a CDN, so the machine showing it needs internet; the API itself does not.)
-- **Postgres anywhere**: point `DATABASE_URL` at a database on another machine. The schema is created by migrations, which the API runs on start.
+- **Postgres anywhere**: point `DATABASE_URL` at a database on another machine. SQLAlchemy creates the tables on start.
 - **CSV / Excel import with validation**: the catalog sheet (`SKU`, `Current Sales Price`, `Brand`, `quantity`...) is checked row by row on the server.
 
 ## Run it (Postgres on another machine)
@@ -20,7 +20,7 @@ cp .env.example .env                   # then open .env and set DATABASE_URL (se
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open **http://localhost:8000/docs**. On the first start the API creates every table (`alembic upgrade head`) and fills the empty database with the demo accounts, the sample catalog and a week of orders. It says so if it cannot reach the database, and it never seeds a database that already has products or orders. For development add `--reload` to the `uvicorn` command so it restarts when you change the code.
+Open **http://localhost:8000/docs**. On the first start the API creates every table (SQLAlchemy `create_all`) and fills the empty database with the demo accounts, the sample catalog and a week of orders. It says so if it cannot reach the database, and it never seeds a database that already has products or orders. For development add `--reload` to the `uvicorn` command so it restarts when you change the code.
 
 The backend is its own program: it needs nothing from the frontend, and the frontend needs nothing but its URL. Start, stop and restart them independently.
 
@@ -113,7 +113,7 @@ Rules, checked row by row (a bad row is skipped and reported with its spreadshee
 
 Importing from a database reads **one table** the same way: the column names are the same as the sheet's. PostgreSQL and AWS RDS (PostgreSQL) connect for real (read-only, 15 s limit, the password never appears in an error); SQLite reads a file inside `IMPORT_SQLITE_DIR`. S3, Google Cloud Storage, Cloud SQL and BigQuery answer `501` until they are added.
 
-## The database and migrations
+## The database and its schema
 
 | Table | Holds |
 |---|---|
@@ -124,15 +124,19 @@ Importing from a database reads **one table** the same way: the column names are
 | `payments` | Dummy gateway charges (last 4 digits only) |
 | `import_jobs` | A record of every import that changed the catalog |
 
-Migrations are in `migrations/versions`. They run on start (`AUTO_MIGRATE=true`), or by hand: `python -m app.db.migrate`. Change a model, then:
+SQLAlchemy alone manages the schema, there is no migration tool. When the API starts (`AUTO_CREATE_SCHEMA=true`) it calls `create_schema` ([app/db/schema.py](app/db/schema.py)), which:
+
+1. creates every table that is missing, with its indexes and constraints (`Base.metadata.create_all`);
+2. adds any column that a model has and the existing table does not (`ALTER TABLE ... ADD COLUMN`), and any missing index.
+
+So adding a column or a table to a model is just: edit the model, restart. You can also run it by hand:
 
 ```bash
-alembic revision --autogenerate -m "add a column"   # generates the migration from the models: read it before you commit it
-python -m app.db.migrate                            # applies it (the API also does this on start)
-python -m app.db.migrate --check                    # fails if the models and the migrations disagree
+python -m app.db.schema            # create / update the tables
+python -m app.db.schema --check    # only report what is missing; exit code 1 if anything is
 ```
 
-Alembic cannot see expression indexes, so the case-insensitive unique indexes (`lower(email)`, `lower(sku)`) are written by hand in the first migration.
+What it will **not** do: rename, drop or retype a column, or touch data. Do those by hand in SQL. A new `NOT NULL` column with no `server_default` is added as nullable (with a warning in the log), because existing rows have no value for it: fill it in and set `NOT NULL` yourself. A database that an earlier version created with Alembic works as it is; its leftover `alembic_version` table is harmless and can be dropped.
 
 ## Tests
 
@@ -142,20 +146,19 @@ pytest                                  # on SQLite, a few seconds
 TEST_WITH_POSTGRES=1 pytest             # on a real Postgres (an embedded one, nothing to install)
 ```
 
-Both build the database with the Alembic migrations and cover login and roles, the catalog, the import validation (CSV and Excel), checkout, payments and the database sources. `TEST_DATABASE_URL=postgresql://...` runs them on a Postgres you already have.
+Both build the database the way the app does (SQLAlchemy `create_all`) and cover login and roles, the catalog, the import validation (CSV and Excel), checkout, payments and the database sources. `TEST_DATABASE_URL=postgresql://...` runs them on a Postgres you already have.
 
 ## Layout
 
 ```
 app/
-  main.py            the FastAPI app: CORS, Swagger text, startup (migrate + seed)
+  main.py            the FastAPI app: CORS, Swagger text, startup (create tables + seed)
   core/              settings (.env), error shape, passwords and tokens
-  db/                engine and session, migrate.py (alembic from code), seed.py (demo data)
+  db/                engine and session, schema.py (create and update the tables), seed.py (demo data)
   models/            SQLAlchemy tables
   schemas/           request and response models (camelCase JSON, validation)
   services/          the logic: products, orders, payments, users, catalog_sheet (the sheet rules), readers (CSV/Excel), importing/
   api/               routes (one file per area) and the sign-in dependencies
-migrations/          Alembic
 samples/             the sample catalog sheet
 tests/
 ```

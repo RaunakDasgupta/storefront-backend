@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     # --- database -------------------------------------------------------------------------------------------
     # Your Postgres, which can be on another machine: postgresql://user:password@HOST:5432/storefront
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/storefront"
-    # Run `alembic upgrade head` when the API starts, so a new database is ready without any extra step.
-    auto_migrate: bool = True
+    # Create the tables (and add columns new in the models) when the API starts, so an empty database is ready with no extra step.
+    auto_create_schema: bool = True
     # Fill an empty database with the demo accounts, products and orders (safe to leave on: it only seeds once).
     seed_demo_data: bool = True
 

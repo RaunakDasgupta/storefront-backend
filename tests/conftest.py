@@ -1,6 +1,6 @@
 """Test setup. By default the tests run on a temporary SQLite file; set TEST_WITH_POSTGRES=1 to run them on a real (embedded)
-Postgres instead, or TEST_DATABASE_URL to use a Postgres you already have. The database is built by the Alembic migrations,
-so the tests exercise the same schema you deploy."""
+Postgres instead, or TEST_DATABASE_URL to use a Postgres you already have. The database is built by the app itself on start
+(SQLAlchemy create_all), so the tests exercise the same schema you deploy."""
 import atexit
 import os
 import tempfile
@@ -23,7 +23,7 @@ def _database_url() -> str:
 
 # the app reads its settings when it is imported, so they must be set first
 os.environ["DATABASE_URL"] = _database_url()
-os.environ["AUTO_MIGRATE"] = "true"
+os.environ["AUTO_CREATE_SCHEMA"] = "true"
 os.environ["SEED_DEMO_DATA"] = "false"
 os.environ["SECRET_KEY"] = "test-secret-that-is-long-enough-for-hs256"
 os.environ["IMPORT_SQLITE_DIR"] = str(_workdir / "import")
@@ -44,7 +44,7 @@ API = "/api/v1"
 
 @pytest.fixture(scope="session")
 def client():
-    with TestClient(app) as c:  # starting the app runs the migrations
+    with TestClient(app) as c:  # starting the app creates the tables
         yield c
 
 
