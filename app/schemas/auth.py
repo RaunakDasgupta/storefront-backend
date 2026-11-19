@@ -1,5 +1,7 @@
 import re
 
+from datetime import datetime
+
 from pydantic import Field, field_validator
 
 from app.schemas.common import CamelModel
@@ -10,6 +12,17 @@ _EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 class UserOut(CamelModel):
     name: str
     email: str
+
+
+class UserRow(CamelModel):
+    """One account in the admin's user lists. Never includes the password hash."""
+
+    id: int
+    name: str
+    email: str
+    employee_id: str | None = None
+    is_active: bool
+    created_at: datetime
 
 
 class SessionOut(CamelModel):

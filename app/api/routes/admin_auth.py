@@ -14,7 +14,10 @@ router = APIRouter(prefix="/admin/auth", tags=["Admin auth"])
 
 @router.post(
     "/login", response_model=SessionOut, summary="Log in to the admin portal",
-    description="Sign in with a work email or an employee ID. Demo account: `admin@storefront.test` (or `EMP-1001`) / `admin1234`. Admin accounts are provisioned, there is no sign-up.",
+    description=(
+        "Sign in with a work email or an employee ID. Admin accounts are provisioned, there is no sign-up.\n\n"
+        "**Demo admin:** `admin@storefront.test` or `EMP-1001`, password `admin1234`."
+    ),
     responses={401: {"model": ErrorResponse, "description": "The email, employee ID or password is incorrect."}},
 )
 def admin_login(data: AdminLoginIn, db: Session = Depends(get_db)) -> SessionOut:

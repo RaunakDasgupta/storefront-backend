@@ -16,42 +16,9 @@ from app.db.session import SessionLocal, engine
 
 log = logging.getLogger("storefront")
 
-DESCRIPTION = """
-The API behind **Everyday Market**: the customer storefront and the admin portal.
+DESCRIPTION = "The API behind Everyday Market. Log in, then press **Authorize** and paste the token."
 
-### Try it in this page
-1. Open **Customer auth → POST /auth/login** (demo: `customer@storefront.test` / `customer123`) or
-   **Admin auth → POST /admin/auth/login** (demo: `admin@storefront.test` or `EMP-1001` / `admin1234`) and press *Try it out*.
-2. Copy the `token` from the response, press **Authorize** (top right) and paste it.
-3. Every locked route now works as that person. Customers see their own orders; admins see everyone's and can manage products.
-
-### Errors
-Every error has the same shape: `{ "message": "..." }`. `401` means log in, `403` means you are not allowed, `409` means a conflict
-(duplicate SKU, out of stock...), `422` means the request is not valid, `402` means a payment problem.
-
-### The catalog sheet (CSV / Excel import)
-One row per SKU, or one row per SKU and stock location. Header names are not case sensitive. Columns:
-
-| Column | Notes |
-|---|---|
-| **SKU** (required) | Unique. The product name and size are taken from it when there is no `Name` column: `10014-Bru Gold 100g` becomes *Bru Gold*, *100g*. |
-| **Current Sales Price** (required) | A number, for example `249`. |
-| PID, Country, Business Group, Category, Brand, SubBrand, Segment, Form | Descriptive. Category defaults to `General`. |
-| system_id, location_id, quantity, uom, status | Where the stock sits. `status` is AVAILABLE, BLOCKED, DAMAGED, HOLD or QUARANTINE and only AVAILABLE stock can be sold. `uom` defaults to EA. |
-| Name, Size, Channel (`retail`/`bulk`), Compare At Price, Description, Logo URL | Optional extras. |
-
-Unknown columns are ignored. Check a file with **POST /products/import/validate** before importing it.
-"""
-
-TAGS = [
-    {"name": "Health", "description": "Is the server up, and can it reach its database?"},
-    {"name": "Customer auth", "description": "Sign up and log in to the storefront."},
-    {"name": "Admin auth", "description": "Log in to the admin portal."},
-    {"name": "Products", "description": "The catalog: list, add, edit, delete and undo, plus importing CSV / Excel files."},
-    {"name": "Orders", "description": "Checkout, My orders, and the admin's order management."},
-    {"name": "Payments", "description": "The dummy card gateway used at checkout."},
-    {"name": "Import sources", "description": "Reading the catalog from a database instead of a file."},
-]
+TAGS = [{"name": n} for n in ("Health", "Customer auth", "Admin auth", "Users", "Products", "Orders", "Payments", "Import sources")]
 
 
 @asynccontextmanager

@@ -27,7 +27,11 @@ def register(data: RegisterIn, db: Session = Depends(get_db)) -> SessionOut:
 
 @router.post(
     "/login", response_model=SessionOut, summary="Log in as a customer",
-    description="Demo account: `customer@storefront.test` / `customer123`. Admin accounts cannot log in here, use `/admin/auth/login`.",
+    description=(
+        "Admin accounts cannot log in here, use `/admin/auth/login`.\n\n"
+        "**Demo customers** (password `customer123`): `customer@storefront.test` (Alex Morgan), `liam.chen@example.com`, "
+        "`sofia.rossi@example.com`, `noah.williams@example.com`."
+    ),
     responses={401: {"model": ErrorResponse, "description": "The email or password is incorrect."}},
 )
 def login(data: LoginIn, db: Session = Depends(get_db)) -> SessionOut:

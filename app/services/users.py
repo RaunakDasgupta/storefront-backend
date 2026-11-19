@@ -13,6 +13,10 @@ def find_by_email(db: Session, email: str) -> User | None:
     return db.scalar(select(User).where(func.lower(User.email) == email.strip().lower()))
 
 
+def list_by_role(db: Session, role: str) -> list[User]:
+    return list(db.scalars(select(User).where(User.role == role).order_by(User.id)))
+
+
 def register_customer(db: Session, data: RegisterIn) -> User:
     if find_by_email(db, data.email) is not None:
         raise ApiError(409, "An account with this email already exists.")
