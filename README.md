@@ -2,7 +2,7 @@
 
 The API behind **Everyday Market**: a [FastAPI](https://fastapi.tiangolo.com) backend with [SQLAlchemy](https://www.sqlalchemy.org) models, [Alembic](https://alembic.sqlalchemy.org) migrations and a Postgres database. It serves the customer storefront and the admin portal of [storefront-frontend](https://github.com/RaunakDasgupta/storefront-frontend).
 
-- **Swagger UI** at `/docs` (and ReDoc at `/redoc`): every route is documented, with an **Authorize** button for the login token.
+- **Swagger UI** at `/docs` (and ReDoc at `/redoc`): every route is documented, with an **Authorize** button for the login token. (The Swagger page loads its script from a CDN, so the machine showing it needs internet; the API itself does not.)
 - **Postgres anywhere**: point `DATABASE_URL` at a database on another machine. The schema is created by migrations, which the API runs on start.
 - **CSV / Excel import with validation**: the catalog sheet (`SKU`, `Current Sales Price`, `Brand`, `quantity`...) is checked row by row on the server.
 
@@ -84,7 +84,7 @@ All routes are under `/api/v1`. Errors are always `{ "message": "..." }`. Tokens
 
 ## The catalog sheet (CSV or Excel)
 
-`samples/Unilever_storefront_products.csv` is a complete example (40 SKUs). One row per SKU, or one row per SKU **and stock location**. Header names are not case sensitive, and spaces, dashes and underscores are interchangeable. Unknown columns are ignored.
+`samples/Unilever_storefront_products.csv` is a complete example (40 SKUs: 20 products in a small pack, marked `retail`, and a larger pack, marked `bulk`, with stock in several locations). One row per SKU, or one row per SKU **and stock location**. Header names are not case sensitive, and spaces, dashes and underscores are interchangeable. Unknown columns are ignored.
 
 | Column | Required | Notes |
 |---|---|---|

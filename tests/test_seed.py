@@ -26,3 +26,5 @@ def test_the_demo_data_is_seeded_once_and_the_demo_logins_work(client):
     product = next(p for p in client.get(f"{API}/products").json() if p["sku"].startswith("10001-"))
     assert product["name"] == "Dove Intense Repair Shampoo" and product["brand"] == "Dove" and product["businessGroup"] == "Beauty & Well being"
     assert product["image"] == "/products/shampoo.jpg"
+    channels = [p["channel"] for p in client.get(f"{API}/products").json()]
+    assert channels.count("retail") == 20 and channels.count("bulk") == 20  # the larger pack sizes are the bulk catalog
