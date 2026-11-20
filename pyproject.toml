@@ -5,8 +5,7 @@ description = "FastAPI backend for the Everyday Market storefront and admin port
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
+    "fastapi[standard]>=0.115",
     "sqlalchemy>=2.0.30",
     "psycopg[binary]>=3.2",
     "pydantic>=2.8",
@@ -23,6 +22,9 @@ dev = [
     "httpx>=0.27",
     "pgserver>=0.1.4",
 ]
+
+[tool.fastapi]
+entrypoint = "app.main:app"  # lets `fastapi run` / `fastapi dev` start the API with no path
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

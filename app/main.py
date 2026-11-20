@@ -1,4 +1,4 @@
-"""The FastAPI app: `uvicorn app.main:app`."""
+"""The FastAPI app: start it with `fastapi run` (or `fastapi dev`), see pyproject.toml [tool.fastapi]."""
 import logging
 from contextlib import asynccontextmanager
 

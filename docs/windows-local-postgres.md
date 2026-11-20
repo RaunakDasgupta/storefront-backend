@@ -78,7 +78,7 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+fastapi run
 ```
 
 ## Check it works
@@ -86,11 +86,11 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 In a second PowerShell window:
 
 ```powershell
-Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod http://localhost:8000/api/v1/health
 ```
 
 - `status: ok` and `database: up`: the API reached the database.
-- A 503 with `database: down`: it could not connect. The uvicorn log says why.
+- A 503 with `database: down`: it could not connect. The log in the window running `fastapi run` says why.
 
 Open http://localhost:8000/docs for the API. In pgAdmin, `storefront → Schemas → public → Tables` should now list the tables, with rows in `products` and `orders` if the demo seed ran.
 

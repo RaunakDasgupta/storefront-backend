@@ -16,10 +16,10 @@ python3 -m venv .venv
 source .venv/bin/activate              # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env                   # set DATABASE_URL in it
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+fastapi run                            # serves on http://0.0.0.0:8000 (add --port 9000 to change it)
 ```
 
-Open **http://localhost:8000/docs**. On the first start the API creates the tables and, if the database is empty, loads the demo accounts, the sample catalog and a week of orders. It never seeds a database that already has products or orders, and it says so if it cannot reach the database. Add `--reload` while developing.
+Open **http://localhost:8000/docs**. On the first start the API creates the tables and, if the database is empty, loads the demo accounts, the sample catalog and a week of orders. It never seeds a database that already has products or orders, and it says so if it cannot reach the database. While developing use `fastapi dev` instead: it restarts when you change the code and listens on localhost only. The same two commands work on Windows, macOS and Linux.
 
 ### Settings (`.env`)
 
