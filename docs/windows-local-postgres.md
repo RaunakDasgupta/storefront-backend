@@ -1,18 +1,17 @@
 # Local Postgres on Windows
 
-This API needs an **empty** Postgres database. This guide sets one up on a Windows machine, first with the normal installer and then without an installer (for locked-down devices).
+This API needs an **empty** Postgres database. This guide sets one up on a Windows machine, first with the normal installer and then without an installer (for locked-down devices). It uses the `postgres` superuser and pgAdmin, so `psql` is not needed.
 
 There are no migrations to run. On first start the API creates the tables and, if the database is empty, loads the demo data (see the main README).
 
 ## Option A: the installer
 
 1. Download the Windows installer from https://www.postgresql.org/download/windows/ (EDB) and run it.
-2. Keep **PostgreSQL Server**, **Command Line Tools** and **pgAdmin 4**. Skip Stack Builder.
+2. Keep **PostgreSQL Server** and **pgAdmin 4**. Skip Stack Builder.
 3. Keep the default data directory and port `5432`. Set a password for the `postgres` superuser and save it.
-4. Add `C:\Program Files\PostgreSQL\<version>\bin` to the system `Path` (Environment Variables dialog), then open a **new** PowerShell window.
-5. Check it runs: `psql --version` and `Get-Service postgresql*` (status `Running`).
+4. Check the server is running: `Get-Service postgresql*` (status `Running`).
 
-Then go to [Create the user and database](#create-the-user-and-database).
+Then go to [Connect pgAdmin](#connect-pgadmin).
 
 ## Option B: no installer (portable zip)
 
@@ -32,31 +31,11 @@ Use this when the installer is blocked. It needs no admin rights and no Windows 
    .\pg_ctl.exe -D "$HOME\pgdata" -l "$HOME\pg.log" start
    ```
 
-   Check it with `.\pg_ctl.exe -D "$HOME\pgdata" status`; stop it with the same command and `stop`. It does **not** start by itself after a reboot, so run the start command again each time.
+   `pg_ctl` only manages the server. Check it with `.\pg_ctl.exe -D "$HOME\pgdata" status`; stop it with the same command and `stop`. It does **not** start by itself after a reboot, so run the start command again each time.
 
 If port `5432` is taken ("address already in use"), start with `-o "-p 5433"` and use `5433` everywhere below.
 
 If `initdb` fails with a missing DLL, install the Microsoft Visual C++ Redistributable.
-
-## Create the user and database
-
-From the folder with `psql.exe` (Option B) or any terminal (Option A):
-
-```powershell
-psql -U postgres -h localhost
-```
-
-```sql
-CREATE USER storefront WITH PASSWORD 'choose-a-password';
-CREATE DATABASE storefront OWNER storefront;
-\q
-```
-
-Test the new login (you should get a `storefront=>` prompt):
-
-```powershell
-psql -U storefront -d storefront -h localhost
-```
 
 ## Connect pgAdmin
 
@@ -68,20 +47,31 @@ Right-click **Servers → Register → Server**:
 | Host | `localhost` |
 | Port | `5432` (or `5433`) |
 | Maintenance database | `postgres` |
-| Username | `postgres`, or `storefront` for the app user |
+| Username | `postgres` |
 | Password | the one you set |
+
+## Create the database
+
+1. In pgAdmin, expand `storefront-local`, right-click **Databases → Create → Database**.
+2. Name it `storefront`, leave the owner as `postgres`, and click **Save**.
+
+Or open the **Query Tool** on the `postgres` database and run:
+
+```sql
+CREATE DATABASE storefront;
+```
 
 ## Point the API at it
 
-In `.env` (copy `.env.example` first):
+Copy `.env.example` to `.env` and set:
 
 ```
-DATABASE_URL=postgresql://storefront:choose-a-password@localhost:5432/storefront
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/storefront
 ```
 
-URL-encode special characters in the password (`@` becomes `%40`, `/` becomes `%2F`, `#` becomes `%23`).
+Use the `postgres` password you set earlier. URL-encode special characters in it (`@` becomes `%40`, `/` becomes `%2F`, `#` becomes `%23`). Use `5433` instead of `5432` if you changed the port.
 
-Then start the API as the main README describes. On Windows PowerShell:
+Then start the API. In PowerShell:
 
 ```powershell
 python -m venv .venv
@@ -91,7 +81,18 @@ copy .env.example .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8000/docs. `GET /health` reports whether the API can reach the database.
+## Check it works
+
+In a second PowerShell window:
+
+```powershell
+Invoke-RestMethod http://localhost:8000/health
+```
+
+- `status: ok` and `database: up`: the API reached the database.
+- A 503 with `database: down`: it could not connect. The uvicorn log says why.
+
+Open http://localhost:8000/docs for the API. In pgAdmin, `storefront → Schemas → public → Tables` should now list the tables, with rows in `products` and `orders` if the demo seed ran.
 
 For the frontend, set `VITE_API_URL=http://localhost:8000/api/v1` in its `.env.local` and restart `npm run dev`.
 
@@ -99,10 +100,11 @@ For the frontend, set `VITE_API_URL=http://localhost:8000/api/v1` in its `.env.l
 
 | Symptom | Likely cause |
 |---|---|
-| `psql` is not recognized | `bin` is not on `Path`, or the terminal is the old one |
-| Password authentication failed | wrong user or password; `postgres` and `storefront` have separate passwords |
-| Connection refused | server not running (Option A: `Start-Service postgresql-x64-<version>`; Option B: run the `pg_ctl start` command) |
+| Password authentication failed | wrong password in `.env`, or special characters in it need URL-encoding |
+| Connection refused | server not running (Option A: `Start-Service postgresql-x64-<version>`; Option B: run the `pg_ctl start` command) or wrong port |
+| `database "storefront" does not exist` | create it in pgAdmin (see above) |
 | Address already in use | another Postgres owns `5432`; use a different port |
+| `/health` is ok but no tables | `AUTO_CREATE_SCHEMA` is `false` in `.env` |
 | API starts but seeds nothing | the database was not empty; the API never seeds one that already has products or orders |
 
 ## If both options are blocked
