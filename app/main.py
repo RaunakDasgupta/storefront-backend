@@ -10,7 +10,7 @@ from sqlalchemy.exc import OperationalError
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.errors import install_error_handlers
-from app.db.schema import create_schema
+from app.db.schema import create_schema, database_encoding
 from app.db.seed import seed_demo_data
 from app.db.session import SessionLocal, engine
 
@@ -25,6 +25,12 @@ TAGS = [{"name": n} for n in ("Health", "Customer auth", "Admin auth", "Users", 
 async def lifespan(_: FastAPI):
     settings = get_settings()
     try:
+        encoding = database_encoding(engine)
+        if encoding and encoding.upper() != "UTF8":
+            log.warning(
+                "The database encoding is %s, not UTF8: product names, addresses and imports with the rupee sign or non-Latin letters will be "
+                "rejected. Create the database with ENCODING 'UTF8' (see the README).", encoding,
+            )
         if settings.auto_create_schema:
             create_schema(engine)
         if settings.seed_demo_data:

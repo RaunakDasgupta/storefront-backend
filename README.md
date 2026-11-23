@@ -8,24 +8,39 @@ The API behind **Everyday Market**, for the storefront-frontend customer storefr
 
 ## Quick start
 
-You need Python 3.11+ and an **empty** Postgres database this machine can reach (it can be on another machine).
+You need Python 3.11 or newer and an **empty** Postgres database with **UTF8 encoding** that this machine can reach (it can be on another machine, and on Windows: see [docs/windows-local-postgres.md](docs/windows-local-postgres.md)). It is tested on PostgreSQL 16 and uses nothing newer than PostgreSQL 10 features. No compiler is needed: every dependency installs from a prebuilt wheel on Windows, macOS and Linux.
+
+macOS / Linux:
 
 ```bash
 cd storefront-backend                  # the folder with this README
 python3 -m venv .venv
-source .venv/bin/activate              # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env                   # set DATABASE_URL in it
 fastapi run                            # serves on http://0.0.0.0:8000 (add --port 9000 to change it)
 ```
 
-Open **http://localhost:8000/docs**. On the first start the API creates the tables and, if the database is empty, loads the demo accounts, the sample catalog and a week of orders. It never seeds a database that already has products or orders, and it says so if it cannot reach the database. While developing use `fastapi dev` instead: it restarts when you change the code and listens on localhost only. The same two commands work on Windows, macOS and Linux.
+Windows (PowerShell):
+
+```powershell
+cd storefront-backend
+py -m venv .venv
+.venv\Scripts\Activate.ps1            # if scripts are blocked: Set-ExecutionPolicy -Scope Process Bypass
+pip install -r requirements.txt
+copy .env.example .env                 # set DATABASE_URL in it
+fastapi run
+```
+
+(Windows `cmd`: `.venv\Scripts\activate.bat`.)
+
+Open **http://localhost:8000/docs**. On the first start the API creates the tables and, if the database is empty, loads the demo accounts, the sample catalog and a week of orders. It never seeds a database that already has products or orders, and it says so if it cannot reach the database. While developing use `fastapi dev` instead: it restarts when you change the code and listens on localhost only. `fastapi run` and `fastapi dev` are the same on every system.
 
 ### Settings (`.env`)
 
 | Setting | Default | |
 |---|---|---|
-| `DATABASE_URL` | local Postgres | `postgresql://USER:PASSWORD@HOST:5432/DATABASE`. `postgres://` works too, and `?sslmode=require` if the server wants SSL. The server must accept connections from this machine (`listen_addresses`, `pg_hba.conf`). |
+| `DATABASE_URL` | local Postgres | `postgresql://USER:PASSWORD@HOST:5432/DATABASE`. `postgres://` works too, and `?sslmode=require` if the server wants SSL. URL-encode special characters in the password (`@` is `%40`, `/` is `%2F`, `#` is `%23`). The server must accept connections from this machine (`listen_addresses`, `pg_hba.conf`). The database must be **UTF8**: the API warns at start if it is not, because a `WIN1252` database (a common Windows default) rejects the rupee sign and non-Latin names. Create it with `CREATE DATABASE storefront ENCODING 'UTF8' TEMPLATE template0;`. |
 | `CORS_ORIGINS` | the Vite dev URLs | Addresses allowed to call the API, comma separated, or `*`. |
 | `SECRET_KEY` | a dev key | Signs login tokens. **Set your own.** |
 | `ACCESS_TOKEN_MINUTES` | `720` | How long a login lasts. |

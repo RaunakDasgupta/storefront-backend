@@ -61,6 +61,17 @@ def _index_names(engine: Engine, table: Table) -> set[str]:
     return {i["name"] for i in inspect(engine).get_indexes(table.name)}
 
 
+def database_encoding(engine: Engine) -> str | None:
+    """A Postgres database's text encoding, such as "UTF8" (None for other databases).
+
+    A database made with the Windows default (WIN1252) cannot store the rupee sign or non-Latin names.
+    """
+    if engine.dialect.name != "postgresql":
+        return None
+    with engine.connect() as conn:
+        return conn.exec_driver_sql("SHOW server_encoding").scalar()
+
+
 def create_schema(engine: Engine) -> list[str]:
     """Bring the database in line with the models. Returns a description of what it changed (empty if nothing)."""
     changes = [f"created table {name}" for name in missing_tables(engine)]

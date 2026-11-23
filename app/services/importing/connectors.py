@@ -7,6 +7,7 @@ The table's columns are matched by name exactly like the columns of a spreadshee
 Every read is read-only, limited to one table and one more row than the import limit, and passwords never appear in messages.
 """
 import re
+import sqlite3
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
@@ -90,7 +91,8 @@ def _sqlite(settings: dict[str, str]) -> list[list[str]]:
     if not path.is_file():
         raise ApiError(422, f"There is no database file {name} in {base}.")
     table = settings.get("table", "").strip() or "products"
-    engine = create_engine(f"sqlite:///file:{path}?mode=ro&uri=true")
+    # opened directly, not through a sqlite:/// URL: SQLAlchemy decodes %xx in URLs, which breaks Windows paths (C:\\Users\\...) and names with spaces, # or ?
+    engine = create_engine("sqlite://", creator=lambda: sqlite3.connect(f"{path.as_uri()}?mode=ro", uri=True))
     return _read(engine, table, settings, get_settings().max_import_rows)
 
 

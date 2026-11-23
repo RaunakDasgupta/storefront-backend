@@ -19,6 +19,13 @@ def connect(client, admin, connector, service, **settings):
     return client.post(f"{API}/import/connect", headers=admin, json={"connector": connector, "service": service, "settings": settings})
 
 
+def test_a_sqlite_file_with_spaces_and_a_hash_in_its_name_is_read(client, admin):
+    make_db("my data #1.sqlite", [("10-Dove Soap 100g", 31.5, "Dove", 12)])
+    body = connect(client, admin, "sqlite", "sqlite", file="my data #1.sqlite", table="products").json()
+    assert "rows" in body, body
+    assert [r["name"] for r in body["rows"]] == ["Dove Soap"]
+
+
 def test_a_sqlite_table_is_read_like_a_spreadsheet(client, admin):
     make_db("catalog.sqlite", [("10-Dove Soap 100g", 31.5, "Dove", 12), ("11-Lux Soap 100g", 30, "Lux", None)])
     body = connect(client, admin, "sqlite", "sqlite", file="catalog.sqlite", table="products").json()

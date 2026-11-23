@@ -53,13 +53,15 @@ Right-click **Servers → Register → Server**:
 ## Create the database
 
 1. In pgAdmin, expand `storefront-local`, right-click **Databases → Create → Database**.
-2. Name it `storefront`, leave the owner as `postgres`, and click **Save**.
+2. Name it `storefront`, leave the owner as `postgres`. On the **Definition** tab check that **Encoding** is `UTF8`, then click **Save**.
 
 Or open the **Query Tool** on the `postgres` database and run:
 
 ```sql
-CREATE DATABASE storefront;
+CREATE DATABASE storefront ENCODING 'UTF8' TEMPLATE template0;
 ```
+
+Set the encoding explicitly. A plain `CREATE DATABASE` copies the server's default, which on some Windows installs is `WIN1252`. That encoding cannot store the rupee sign or non-Latin names, so imports and orders containing them would fail. The API logs a warning at start if the database is not UTF8.
 
 ## Point the API at it
 
@@ -103,8 +105,9 @@ For the frontend, set `VITE_API_URL=http://localhost:8000/api/v1` in its `.env.l
 | Password authentication failed | wrong password in `.env`, or special characters in it need URL-encoding |
 | Connection refused | server not running (Option A: `Start-Service postgresql-x64-<version>`; Option B: run the `pg_ctl start` command) or wrong port |
 | `database "storefront" does not exist` | create it in pgAdmin (see above) |
+| Warning "The database encoding is WIN1252, not UTF8" | drop the database and create it again with `ENCODING 'UTF8' TEMPLATE template0` (see above) |
 | Address already in use | another Postgres owns `5432`; use a different port |
-| `/health` is ok but no tables | `AUTO_CREATE_SCHEMA` is `false` in `.env` |
+| `/api/v1/health` is ok but no tables | `AUTO_CREATE_SCHEMA` is `false` in `.env` |
 | API starts but seeds nothing | the database was not empty; the API never seeds one that already has products or orders |
 
 ## If both options are blocked
